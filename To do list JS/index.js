@@ -1,66 +1,75 @@
-// Paso 1: Referencia al formulario
 const formulario = document.getElementById('formulario');
 const inputTarea = document.getElementById('tareaInput');
 const listaTareas = document.getElementById('listaTareas');
 
-// Paso 4: Array para almacenar tareas
-const tareas = [];
+const API_URL = 'http://localhost:3000/tareas';
 
-// Paso 2: Evento submit del formulario
+// Obtener y mostrar tareas al cargar
+document.addEventListener('DOMContentLoaded', mostrarTareas);
+
+// Envío del formulario
 formulario.addEventListener('submit', function(event) {
-  event.preventDefault(); // Evitar recarga
+  event.preventDefault();
 
-  // Paso 3: Captura del texto ingresado
   const descripcion = inputTarea.value.trim();
-
   if (descripcion !== '') {
-    // Paso 4: Crear objeto y guardar en array
     const nuevaTarea = {
       descripcion: descripcion,
       completada: false
     };
-    tareas.push(nuevaTarea);
 
-    // Limpiar input
-    inputTarea.value = '';
-
-    // Paso 7: Refrescar lista
-    mostrarTareas();
+    fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(nuevaTarea)
+    })
+    .then(() => {
+      inputTarea.value = '';
+      mostrarTareas();
+    });
   }
 });
 
-// Paso 5: Función para mostrar tareas
+// Mostrar todas las tareas
 function mostrarTareas() {
   listaTareas.innerHTML = '';
 
-  tareas.forEach((tarea, index) => {
-    const div = document.createElement('div');
-    div.textContent = tarea.descripcion;
+  fetch(API_URL)
+    .then(response => response.json())
+    .then(tareas => {
+      tareas.forEach(tarea => {
+        const div = document.createElement('div');
+        div.textContent = tarea.descripcion;
+        if (tarea.completada) {
+          div.style.textDecoration = 'line-through';
+        }
 
-    if (tarea.completada) {
-      div.style.textDecoration = 'line-through';
-    }
+        // Botón completar
+        const botonCompletar = document.createElement('button');
+        botonCompletar.textContent = '✅';
+        botonCompletar.addEventListener('click', () => {
+          fetch(`${API_URL}/${tarea.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ completada: !tarea.completada })
+          }).then(mostrarTareas);
+        });
 
-    // Botón: Marcar como completada
-    const botonCompletar = document.createElement('button');
-    botonCompletar.textContent = '✅';
-    botonCompletar.addEventListener('click', function() {
-      tareas[index].completada = !tareas[index].completada;
-      mostrarTareas();
+        // Botón eliminar
+        const botonEliminar = document.createElement('button');
+        botonEliminar.textContent = '❌';
+        botonEliminar.style.marginLeft = '10px';
+        botonEliminar.addEventListener('click', () => {
+          fetch(`${API_URL}/${tarea.id}`, {
+            method: 'DELETE'
+          }).then(mostrarTareas);
+        });
+
+        div.appendChild(botonCompletar);
+        div.appendChild(botonEliminar);
+        listaTareas.appendChild(div);
+      });
     });
-
-    // 🔹 BONUS: Botón para eliminar tarea
-    const botonEliminar = document.createElement('button');
-    botonEliminar.textContent = '❌';
-    botonEliminar.style.marginLeft = '10px'; // Espacio entre botones
-    botonEliminar.addEventListener('click', function() {
-      tareas.splice(index, 1); // Eliminar tarea por índice
-      mostrarTareas();
-    });
-
-    // Agregar ambos botones
-    div.appendChild(botonCompletar);
-    div.appendChild(botonEliminar);
-    listaTareas.appendChild(div);
-  });
 }
